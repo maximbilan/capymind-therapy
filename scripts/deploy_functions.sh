@@ -2,7 +2,6 @@
 
 FUNCTIONS=("therapysession")
 RUNTIME="python312"
-PROJECT_ID=$CAPY_PROJECT_ID
 MEMORY="256MB"
 TIMEOUT=60 # 1 minute
 
@@ -30,7 +29,7 @@ for FUNC_NAME in "${FUNCTIONS[@]}"; do
         --trigger-http \
         --allow-unauthenticated \
         --entry-point $FUNC_NAME \
-        --project $PROJECT_ID \
+        --project $CAPY_PROJECT_ID \
         --gen2 \
         --region $CAPY_SERVER_REGION \
         --set-env-vars $ENV_VARS \
