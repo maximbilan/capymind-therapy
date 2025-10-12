@@ -34,7 +34,8 @@ BOUNDARIES = (
 
 class PocketTherapistAgent:
     def __init__(self, model: Optional[str] = None) -> None:
-        self.model = model or os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+        # Prefer the "-latest" aliases; some environments/models require them.
+        self.model = model or os.getenv("GEMINI_MODEL", "gemini-1.5-flash-latest")
         self._maybe_configure_gemini()
 
     def _maybe_configure_gemini(self) -> None:
@@ -44,12 +45,58 @@ class PocketTherapistAgent:
         if api_key:
             genai.configure(api_key=api_key)
 
+    def _list_supported_models(self) -> List[str]:
+        if genai is None:
+            return []
+        try:
+            models = list(genai.list_models())
+        except Exception:
+            return []
+        supported: List[str] = []
+        for m in models:
+            # google-generativeai exposes supported methods as supported_generation_methods
+            methods = getattr(m, "supported_generation_methods", [])
+            # Prefer chat/text generation-capable models
+            if "generateContent" in methods or "generate_content" in methods:
+                supported.append(getattr(m, "name", ""))
+        return [name for name in supported if name]
+
+    def _try_model_candidates(self) -> List[str]:
+        # Ordered candidates to try when the chosen model fails
+        candidates = [
+            self.model,
+            "gemini-1.5-flash-latest",
+            "gemini-1.5-pro-latest",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro",
+            "gemini-1.0-pro",
+        ]
+        # Append any discoverable supported models not already included
+        discovered = self._list_supported_models()
+        for name in discovered:
+            if name not in candidates:
+                candidates.append(name)
+        # Some APIs return fully qualified names like "models/gemini-1.5-flash"
+        # Normalize by adding both raw and fully-qualified forms to try.
+        normalized: List[str] = []
+        for name in candidates:
+            normalized.append(name)
+            if not name.startswith("models/"):
+                normalized.append(f"models/{name}")
+        # Keep order and uniqueness
+        seen = set()
+        ordered_unique: List[str] = []
+        for name in normalized:
+            if name not in seen:
+                seen.add(name)
+                ordered_unique.append(name)
+        return ordered_unique
+
     def _gemini_reply(self, messages: List[Dict[str, str]]) -> str:
         if genai is None or not os.getenv("GEMINI_API_KEY"):
             return (
                 "Gemini is not configured. Please set GEMINI_API_KEY or install ADK support."
             )
-        model = genai.GenerativeModel(self.model)
         # Combine into a single prompt for simplicity in CLI usage
         content_parts: List[str] = [
             safety_disclaimer(),
@@ -62,8 +109,34 @@ class PocketTherapistAgent:
             text = msg.get("content", "")
             content_parts.append(f"{role.upper()}: {text}")
         content_parts.append("\nASSISTANT:")
-        response = model.generate_content("\n".join(content_parts))
-        return response.text or "(no response)"
+
+        prompt = "\n".join(content_parts)
+
+        last_error: Optional[Exception] = None
+        for candidate in self._try_model_candidates():
+            try:
+                model = genai.GenerativeModel(candidate)
+                response = model.generate_content(prompt)
+                if getattr(response, "text", None):
+                    # Update chosen model for subsequent turns
+                    self.model = candidate if not candidate.startswith("models/") else candidate.split("/", 1)[-1]
+                    return response.text
+                # If no text, keep trying
+            except Exception as e:  # NotFound / Unsupported / etc.
+                last_error = e
+                continue
+
+        # If all candidates failed, report a helpful message
+        hint_models = ", ".join(self._list_supported_models()[:6]) or "(no models discovered)"
+        error_text = (
+            "Gemini model not found or unsupported. "
+            f"Tried candidates including '{self.model}'. "
+            "You can set GEMINI_MODEL to a supported value (e.g., 'gemini-1.5-pro-latest').\n"
+            f"Discovered models supporting generateContent: {hint_models}"
+        )
+        if last_error:
+            error_text += f"\nLast error: {last_error}"
+        return error_text
 
     def _adk_reply(self, messages: List[Dict[str, str]]) -> Optional[str]:
         if adk is None:
