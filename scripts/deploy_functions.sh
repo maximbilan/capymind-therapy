@@ -32,7 +32,7 @@ for FUNC_NAME in "${FUNCTIONS[@]}"; do
         --entry-point $FUNC_NAME \
         --project $PROJECT_ID \
         --gen2 \
-        --region $RINGEN_SERVER_REGION \
+        --region $CAPY_SERVER_REGION \
         --set-env-vars $ENV_VARS \
         --set-secrets $SECRETS \
         --memory $MEMORY \
