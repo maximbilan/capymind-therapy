@@ -141,15 +141,111 @@ class PocketTherapistAgent:
     def _adk_reply(self, messages: List[Dict[str, str]]) -> Optional[str]:
         if adk is None:
             return None
+        # Try to import LlmAgent from likely locations
+        LlmAgent = None  # type: ignore
+        for path in ("adk.agents", "adk"):
+            try:
+                mod = __import__(path, fromlist=["LlmAgent"])  # type: ignore
+                if hasattr(mod, "LlmAgent"):
+                    LlmAgent = getattr(mod, "LlmAgent")
+                    break
+            except Exception:
+                continue
+        if LlmAgent is None:
+            return None
+
+        # Optional provider setup via envs
+        provider = os.getenv("CAPY_ADK_PROVIDER", "ai_studio").lower()
+        if provider == "vertex":
+            try:
+                import vertexai  # type: ignore
+                project = os.getenv("CAPY_VERTEX_PROJECT")
+                location = os.getenv("CAPY_VERTEX_LOCATION", "us-central1")
+                if project:
+                    vertexai.init(project=project, location=location)
+            except Exception:
+                # If Vertex init fails, fall back to AI Studio path
+                provider = "ai_studio"
+
+        if provider == "ai_studio":
+            # Ensure downstream libraries see an API key, in case ADK expects a generic var
+            api_key = os.getenv("CAPY_GEMINI_API_KEY")
+            if api_key and not os.getenv("GEMINI_API_KEY"):
+                os.environ["GEMINI_API_KEY"] = api_key
+
+        # Prepare a single prompt string for broad compatibility
+        transcript: List[str] = [
+            safety_disclaimer(),
+            SYSTEM_STYLE,
+            BOUNDARIES,
+            "",
+            "Conversation so far:",
+        ]
+        for msg in messages:
+            role = msg.get("role", "user").upper()
+            text = msg.get("content", "")
+            transcript.append(f"{role}: {text}")
+        transcript.append("ASSISTANT:")
+        prompt = "\n".join(transcript)
+
         try:
-            # The specific API depends on ADK version; this is intentionally
-            # isolated so failures gracefully fall back to Gemini.
-            # Pseudocode-like usage:
-            # agent = adk.create_agent(system=SYSTEM_STYLE + "\n" + BOUNDARIES)
-            # return agent.chat(messages)
-            return None
+            agent = LlmAgent(system=SYSTEM_STYLE + "\n" + BOUNDARIES, model=self.model)  # type: ignore
         except Exception:
+            # Fallback: try constructing without kwargs variations
+            try:
+                agent = LlmAgent(system=SYSTEM_STYLE + "\n" + BOUNDARIES)  # type: ignore
+            except Exception:
+                return None
+
+        def _extract_text(resp: Any) -> Optional[str]:
+            if resp is None:
+                return None
+            for attr in ("text", "output", "content"):
+                if hasattr(resp, attr):
+                    val = getattr(resp, attr)
+                    if isinstance(val, str) and val.strip():
+                        return val
+            if isinstance(resp, dict):
+                for key in ("text", "output", "content"):
+                    val = resp.get(key)
+                    if isinstance(val, str) and val.strip():
+                        return val
+            if isinstance(resp, str) and resp.strip():
+                return resp
             return None
+
+        # Try common method names with both messages and prompt
+        attempts = [
+            ("chat", messages),
+            ("respond", messages),
+            ("generate", prompt),
+            ("run", prompt),
+            ("invoke", prompt),
+        ]
+        for method_name, arg in attempts:
+            try:
+                method = getattr(agent, method_name, None)
+                if callable(method):
+                    resp = method(arg)  # type: ignore
+                    text = _extract_text(resp)
+                    if text:
+                        return text
+            except TypeError:
+                # Retry with alternate arg shape (string vs list)
+                try:
+                    method = getattr(agent, method_name, None)
+                    if callable(method):
+                        alt_arg = prompt if isinstance(arg, list) else messages
+                        resp = method(alt_arg)  # type: ignore
+                        text = _extract_text(resp)
+                        if text:
+                            return text
+                except Exception:
+                    continue
+            except Exception:
+                continue
+
+        return None
 
     def reply(self, user_text: str, history: Optional[List[Dict[str, str]]] = None) -> str:
         safety = check_crisis(user_text)
