@@ -35,13 +35,13 @@ BOUNDARIES = (
 class PocketTherapistAgent:
     def __init__(self, model: Optional[str] = None) -> None:
         # Prefer the "-latest" aliases; some environments/models require them.
-        self.model = model or os.getenv("GEMINI_MODEL", "gemini-1.5-flash-latest")
+        self.model = model or os.getenv("CAPY_GEMINI_MODEL", "gemini-1.5-flash-latest")
         self._maybe_configure_gemini()
 
     def _maybe_configure_gemini(self) -> None:
         if genai is None:
             return
-        api_key = os.getenv("GEMINI_API_KEY")
+        api_key = os.getenv("CAPY_GEMINI_API_KEY")
         if api_key:
             genai.configure(api_key=api_key)
 
@@ -93,9 +93,9 @@ class PocketTherapistAgent:
         return ordered_unique
 
     def _gemini_reply(self, messages: List[Dict[str, str]]) -> str:
-        if genai is None or not os.getenv("GEMINI_API_KEY"):
+        if genai is None or not os.getenv("CAPY_GEMINI_API_KEY"):
             return (
-                "Gemini is not configured. Please set GEMINI_API_KEY or install ADK support."
+                "Gemini is not configured. Please set CAPY_GEMINI_API_KEY or install ADK support."
             )
         # Combine into a single prompt for simplicity in CLI usage
         content_parts: List[str] = [

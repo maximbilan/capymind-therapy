@@ -17,7 +17,8 @@ pip install -e .[adk]
 Set your Gemini API key if not using ADK or while ADK is experimental:
 
 ```bash
-export GEMINI_API_KEY=sk-...  # get from Google AI Studio
+export CAPY_GEMINI_API_KEY=sk-...  # get from Google AI Studio
+export CAPY_GEMINI_MODEL=gemini-1.5-flash-latest  # optional
 ```
 
 ## Usage
