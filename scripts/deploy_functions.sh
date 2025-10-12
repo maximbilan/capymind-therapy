@@ -1,7 +1,7 @@
 #!/bin/bash
 
 FUNCTIONS=("therapysession")
-RUNTIME="go125"
+RUNTIME="python312"
 PROJECT_ID=$CAPY_PROJECT_ID
 MEMORY="256MB"
 TIMEOUT=60 # 1 minute
