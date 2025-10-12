@@ -1,0 +1,7 @@
+name: Build and Test
+description: This workflow builds and run tests on the project
+
+on:
+  pull_request:
+    branches:
+      - '**'
