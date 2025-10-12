@@ -29,6 +29,29 @@ Interactive chat:
 capymind-session chat
 ```
 
+### Google Cloud Functions (HTTP) deployment
+
+Create a simple function that exposes the agent as a REST API.
+
+Entry point: `agent_chat` in `capymind_session/gcf.py`.
+
+Deploy (2nd gen):
+
+```bash
+gcloud functions deploy capymind-agent-chat \
+  --gen2 --runtime python312 --region us-central1 \
+  --entry-point agent_chat --trigger-http --allow-unauthenticated \
+  --set-env-vars CAPY_GEMINI_API_KEY=$CAPY_GEMINI_API_KEY,CAPY_GEMINI_MODEL=gemini-1.5-flash-latest
+```
+
+Invoke:
+
+```bash
+curl -X POST "https://REGION-PROJECT.cloudfunctions.net/capymind-agent-chat" \
+  -H 'Content-Type: application/json' \
+  -d '{"message": "I feel anxious before my meeting, can you help?"}'
+```
+
 Slash commands inside chat:
 - `/journal <text>`: Save a private journal entry
 - `/recent [n]`: Show last n journal entries (default 5)
