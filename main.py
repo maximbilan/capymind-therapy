@@ -31,14 +31,25 @@ def _get_last_notes(user_id: str, limit: int = 5) -> List[str]:
     return texts
 
 
-def _build_prompt(user_message: str, last_notes: List[str]) -> str:
+def _build_prompt(user_message: str, last_notes: List[str], language_name: str) -> str:
     history = "\n\n".join(f"- {n}" for n in last_notes) if last_notes else "(no prior notes)"
     return (
         "You are a supportive, empathetic therapist. Use the user's prior journal "
-        "notes to personalize guidance. Keep responses concise, kind, and practical.\n\n"
+        "notes to personalize guidance. Keep responses concise, kind, and practical.\n"
+        f"Always reply in {language_name}.\n\n"
         f"User message: {user_message}\n\n"
         f"Recent notes:\n{history}"
     )
+
+
+def _get_user_locale(user_id: str) -> str:
+    db = _firestore_client()
+    doc = db.collection("users").document(user_id).get()
+    data = doc.to_dict() or {}
+    locale = data.get("locale") or "en"
+    if locale not in ("en", "uk"):
+        locale = "en"
+    return locale
 
 
 @functions_framework.http
@@ -77,8 +88,16 @@ def therapysession(request):
         # Fail-soft if Firestore is not accessible
         logger.exception("failed to fetch last notes from Firestore")
         last_notes = []
+    # Fetch user locale and map to language name for the prompt
+    try:
+        locale = _get_user_locale(user_id)
+    except Exception:
+        logger.exception("failed to fetch user locale from Firestore; defaulting to en")
+        locale = "en"
+    language_name = "English" if locale == "en" else "Ukrainian"
+    logger.info("using locale=%s language=%s", locale, language_name)
 
-    prompt = _build_prompt(message, last_notes)
+    prompt = _build_prompt(message, last_notes, language_name)
 
     try:
         # Use ADK agent; assume .run returns a string
