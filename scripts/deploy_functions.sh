@@ -14,7 +14,7 @@ done
 ENV_VARS=${ENV_VARS%,}
 
 # Set the secret environment variables
-SECRET_PARAMS=("CAPY_GEMINI_API_KEY=gemini_api_key")
+SECRET_PARAMS=("GOOGLE_API_KEY=gemini_api_key")
 SECRETS=""
 for PARAM in "${SECRET_PARAMS[@]}"; do
   SECRETS+="$PARAM:latest,"
