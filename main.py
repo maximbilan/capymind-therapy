@@ -76,6 +76,49 @@ def _gemini_reply(prompt: str) -> str:
     return text
 
 
+def _adk_reply(prompt: str, logger: logging.Logger) -> str:
+    """Call the ADK agent using whatever callable it exposes."""
+    # Try common method names used by various ADK versions
+    method_order = ("run", "invoke", "chat", "__call__")
+    for name in method_order:
+        try:
+            fn = getattr(root_agent, name)
+        except AttributeError:
+            continue
+        try:
+            # Try common signatures across ADK versions
+            # 1) Positional string
+            try:
+                result = fn(prompt)
+            except TypeError:
+                # 2) Keyword arg
+                try:
+                    result = fn(input=prompt)
+                except TypeError:
+                    # 3) Dict payload
+                    try:
+                        result = fn({"input": prompt})
+                    except TypeError:
+                        # 4) Messages list
+                        result = fn(messages=[{"role": "user", "content": prompt}])
+            # Normalize likely return types
+            if isinstance(result, str):
+                return result
+            # Some agents may return objects with .text or dicts
+            text = getattr(result, "text", None)
+            if isinstance(text, str) and text:
+                return text
+            if isinstance(result, dict):
+                for key in ("text", "message", "output"):
+                    if key in result and isinstance(result[key], str):
+                        return result[key]
+            # Fallback string conversion
+            return str(result)
+        except Exception:
+            logger.exception("ADK agent method '%s' failed", name)
+    raise RuntimeError("No usable ADK agent method found (tried run/invoke/chat/__call__) ")
+
+
 @functions_framework.http
 def therapysession(request):
     # Configure logger lazily (Cloud Functions adds handlers)
@@ -124,10 +167,9 @@ def therapysession(request):
     prompt = _build_prompt(message, last_notes, language_name)
 
     try:
-        # Use ADK agent; assume .run returns a string
-        response_text = root_agent.run(prompt)
+        response_text = _adk_reply(prompt, logger)
     except Exception:
-        logger.exception("ADK agent run failed; attempting Gemini fallback")
+        logger.exception("ADK agent call failed; attempting Gemini fallback")
         try:
             response_text = _gemini_reply(prompt)
         except Exception:
