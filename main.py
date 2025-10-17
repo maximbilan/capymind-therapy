@@ -3,9 +3,10 @@ import os
 import logging
 from typing import Dict, Any, List
 
-import functions_framework
-from session_agent.agent import root_agent
+import requests
 from google.cloud import firestore
+from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.oauth2 import id_token as google_id_token
 
 
 def _firestore_client():
@@ -76,75 +77,93 @@ def _gemini_reply(prompt: str) -> str:
     return text
 
 
-def _adk_reply(prompt: str, logger: logging.Logger) -> str:
-    """Call the ADK agent using whatever callable it exposes."""
-    # Try common method names used by various ADK versions
-    method_order = ("run", "invoke", "chat", "__call__")
-    for name in method_order:
-        try:
-            fn = getattr(root_agent, name)
-        except AttributeError:
-            continue
-        try:
-            # Try common signatures across ADK versions
-            # 1) Positional string
-            try:
-                result = fn(prompt)
-            except TypeError:
-                # 2) Keyword arg
+def _adk_api_reply(prompt: str, logger: logging.Logger, session_id: str | None = None) -> str:
+    """Call the ADK agent over Cloud Run HTTP using ID token auth.
+
+    Environment variables:
+    - ADK_CLOUD_RUN_URL (preferred) or CAPY_ADK_URL: Full HTTPS URL to the ADK service root
+    - ADK_TIMEOUT_SECS (optional): HTTP timeout in seconds (default: 60)
+    """
+    url = os.getenv("ADK_CLOUD_RUN_URL") or os.getenv("CAPY_ADK_URL")
+    if not url:
+        raise RuntimeError("ADK_CLOUD_RUN_URL (or CAPY_ADK_URL) is not set")
+
+    timeout = float(os.getenv("ADK_TIMEOUT_SECS", "60"))
+
+    # Acquire an ID token for the Cloud Run service audience (use the URL as audience)
+    try:
+        auth_req = GoogleAuthRequest()
+        token = google_id_token.fetch_id_token(auth_req, url)
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch ID token for audience {url}: {e}")
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    # Common ADK HTTP payload shape is {"input": "..."}; optionally include session_id
+    payload: Dict[str, Any] = {"input": prompt}
+    if session_id:
+        # Many ADK runtimes accept session_id for per-user memory. Extra fields are ignored otherwise.
+        payload["session_id"] = session_id
+
+    try:
+        resp = requests.post(url, headers=headers, data=json.dumps(payload), timeout=timeout)
+    except Exception as e:
+        raise RuntimeError(f"HTTP request to ADK service failed: {e}")
+
+    if resp.status_code >= 400:
+        raise RuntimeError(f"ADK service error {resp.status_code}: {resp.text}")
+
+    # Try to interpret JSON responses first, then fallback to text
+    text_out: str = ""
+    try:
+        data = resp.json()
+        if isinstance(data, dict):
+            # Heuristics across typical agent runtimes
+            for key in ("output", "text", "message"):
+                val = data.get(key)
+                if isinstance(val, str) and val:
+                    text_out = val
+                    break
+            if not text_out and "candidates" in data:
+                # Gemini-like structure
                 try:
-                    result = fn(input=prompt)
-                except TypeError:
-                    # 3) Dict payload
-                    try:
-                        result = fn({"input": prompt})
-                    except TypeError:
-                        # 4) Messages list
-                        result = fn(messages=[{"role": "user", "content": prompt}])
-            # Normalize likely return types
-            if isinstance(result, str):
-                return result
-            # Some agents may return objects with .text or dicts
-            text = getattr(result, "text", None)
-            if isinstance(text, str) and text:
-                return text
-            if isinstance(result, dict):
-                for key in ("text", "message", "output"):
-                    if key in result and isinstance(result[key], str):
-                        return result[key]
-            # Fallback string conversion
-            return str(result)
-        except Exception:
-            logger.exception("ADK agent method '%s' failed", name)
-    raise RuntimeError("No usable ADK agent method found (tried run/invoke/chat/__call__) ")
+                    text_out = (
+                        data["candidates"][0]["content"]["parts"][0]["text"]
+                    )
+                except Exception:
+                    pass
+        if not text_out:
+            text_out = resp.text or ""
+    except ValueError:
+        text_out = resp.text or ""
+
+    if not text_out:
+        text_out = (
+            "I'm here with you. Could you share more about how you're feeling?"
+        )
+    return text_out
 
 
-@functions_framework.http
-def therapysession(request):
-    # Configure logger lazily (Cloud Functions adds handlers)
+def run_therapy_session(user_id: str, message: str) -> str:
+    """High-level API to run a therapy session turn.
+
+    Builds context from Firestore, crafts a prompt, then calls the ADK agent API.
+    Returns the assistant's reply text.
+    """
+    # Configure logger lazily for CLI/library usage
     logger = logging.getLogger("capymind_session")
     if not logger.handlers:
         logging.basicConfig(level=logging.INFO)
 
-    if request.method != "POST":
-        return ("Only POST is supported", 405)
-
-    try:
-        payload: Dict[str, Any] = request.get_json(force=True, silent=False) or {}
-    except Exception:
-        return ("Invalid JSON", 400)
-
-    user_id = payload.get("user_id")
-    message = payload.get("message")
-    if not user_id or not message:
-        return ("Missing user_id or message", 400)
-
     logger.info(
-        "therapysession request: project=%s emulator=%s user_id=%s",
+        "session start: project=%s emulator=%s user_id=%s",
         os.getenv("CAPY_PROJECT_ID"), os.getenv("FIRESTORE_EMULATOR_HOST"), user_id,
     )
 
-    last_notes = []
+    last_notes: List[str] = []
     try:
         last_notes = _get_last_notes(user_id, limit=5)
         logger.info("fetched %d last notes", len(last_notes))
@@ -152,10 +171,9 @@ def therapysession(request):
             snippet = n if len(n) <= 300 else n[:300] + "..."
             logger.info("note %d: %s", i, snippet)
     except Exception:
-        # Fail-soft if Firestore is not accessible
         logger.exception("failed to fetch last notes from Firestore")
         last_notes = []
-    # Fetch user locale and map to language name for the prompt
+
     try:
         locale = _get_user_locale(user_id)
     except Exception:
@@ -167,9 +185,9 @@ def therapysession(request):
     prompt = _build_prompt(message, last_notes, language_name)
 
     try:
-        response_text = _adk_reply(prompt, logger)
+        response_text = _adk_api_reply(prompt, logger, session_id=user_id)
     except Exception:
-        logger.exception("ADK agent call failed; attempting Gemini fallback")
+        logger.exception("ADK API call failed; attempting Gemini fallback")
         try:
             response_text = _gemini_reply(prompt)
         except Exception:
@@ -179,4 +197,21 @@ def therapysession(request):
                 "but I'd still like to help. Could you share more about how you're feeling?"
             )
 
-    return (response_text, 200, {"Content-Type": "text/plain; charset=utf-8"})
+    return response_text
+
+
+def _parse_cli_args() -> Dict[str, Any]:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Run a CapyMind therapy session turn")
+    parser.add_argument("--user-id", required=True, help="User identifier")
+    parser.add_argument("--message", required=True, help="User message text")
+    args = parser.parse_args()
+    return {"user_id": args.user_id, "message": args.message}
+
+
+if __name__ == "__main__":
+    params = _parse_cli_args()
+    output = run_therapy_session(params["user_id"], params["message"])
+    # Print plain text output
+    print(output)
