@@ -2,7 +2,7 @@
 
 FUNCTIONS=("therapysession")
 RUNTIME="python312"
-MEMORY="256MB"
+MEMORY="1GB"
 TIMEOUT=60 # 1 minute
 
 # Set environment variables
