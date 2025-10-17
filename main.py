@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 from typing import Dict, Any, List
 
 import functions_framework
@@ -42,6 +43,11 @@ def _build_prompt(user_message: str, last_notes: List[str]) -> str:
 
 @functions_framework.http
 def therapysession(request):
+    # Configure logger lazily (Cloud Functions adds handlers)
+    logger = logging.getLogger("capymind_session")
+    if not logger.handlers:
+        logging.basicConfig(level=logging.INFO)
+
     if request.method != "POST":
         return ("Only POST is supported", 405)
 
@@ -55,11 +61,21 @@ def therapysession(request):
     if not user_id or not message:
         return ("Missing user_id or message", 400)
 
+    logger.info(
+        "therapysession request: project=%s emulator=%s user_id=%s",
+        os.getenv("CAPY_PROJECT_ID"), os.getenv("FIRESTORE_EMULATOR_HOST"), user_id,
+    )
+
     last_notes = []
     try:
         last_notes = _get_last_notes(user_id, limit=5)
+        logger.info("fetched %d last notes", len(last_notes))
+        for i, n in enumerate(last_notes[:5], start=1):
+            snippet = n if len(n) <= 300 else n[:300] + "..."
+            logger.info("note %d: %s", i, snippet)
     except Exception:
         # Fail-soft if Firestore is not accessible
+        logger.exception("failed to fetch last notes from Firestore")
         last_notes = []
 
     prompt = _build_prompt(message, last_notes)
