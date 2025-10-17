@@ -16,11 +16,10 @@ for PARAM in "${SECRET_PARAMS[@]}"; do
 done
 SECRETS=${SECRETS%,}
 
-gcloud run deploy capymind-agent \
-  --source . \
-  --region $CAPY_SERVER_REGION \
-  --project $CAPY_PROJECT_ID \
-  --allow-unauthenticated \
-  --set-env-vars $ENV_VARS \
-  --set-secrets $SECRETS \
-  
+adk deploy cloud_run \
+  --project=$CAPY_PROJECT_ID \
+  --region=$CAPY_SERVER_REGION \
+  --service_name=capymind \
+  --app_name=capymind_agent \
+  --with_ui \
+capymind_agent
