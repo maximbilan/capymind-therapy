@@ -52,6 +52,30 @@ def _get_user_locale(user_id: str) -> str:
     return locale
 
 
+def _gemini_reply(prompt: str) -> str:
+    # Prefer GOOGLE_API_KEY (standard for Google AI SDK). Fallback to CAPY_GEMINI_API_KEY.
+    key = os.getenv("GOOGLE_API_KEY") or os.getenv("CAPY_GEMINI_API_KEY")
+    if not key:
+        raise RuntimeError("GOOGLE_API_KEY (or CAPY_GEMINI_API_KEY) is not set")
+    try:
+        import google.generativeai as genai  # lazy import
+    except Exception as imp_err:
+        raise RuntimeError(f"google-generativeai not available: {imp_err}")
+
+    genai.configure(api_key=key)
+    model_name = os.getenv("CAPY_GEMINI_MODEL", "gemini-1.5-flash-latest")
+    model = genai.GenerativeModel(model_name)
+    resp = model.generate_content(prompt)
+    try:
+        text = resp.text or ""
+    except Exception:
+        # Best-effort extract
+        text = getattr(resp, "candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+    if not text:
+        text = "I'm here with you. Could you share more about how you're feeling?"
+    return text
+
+
 @functions_framework.http
 def therapysession(request):
     # Configure logger lazily (Cloud Functions adds handlers)
@@ -102,10 +126,15 @@ def therapysession(request):
     try:
         # Use ADK agent; assume .run returns a string
         response_text = root_agent.run(prompt)
-    except Exception as e:
-        response_text = (
-            "I'm here with you. I wasn't able to access advanced tools just now, "
-            "but I'd still like to help. Could you share more about how you're feeling?"
-        )
+    except Exception:
+        logger.exception("ADK agent run failed; attempting Gemini fallback")
+        try:
+            response_text = _gemini_reply(prompt)
+        except Exception:
+            logger.exception("Gemini fallback failed; returning static fallback")
+            response_text = (
+                "I'm here with you. I wasn't able to access advanced tools just now, "
+                "but I'd still like to help. Could you share more about how you're feeling?"
+            )
 
     return (response_text, 200, {"Content-Type": "text/plain; charset=utf-8"})
