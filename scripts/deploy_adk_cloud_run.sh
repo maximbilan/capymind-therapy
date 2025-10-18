@@ -22,5 +22,4 @@ adk deploy cloud_run \
   --service_name=capymind-agent \
   --app_name=capymind_agent \
   --with_ui \
-  --allow-unauthenticated \
 capymind_agent
