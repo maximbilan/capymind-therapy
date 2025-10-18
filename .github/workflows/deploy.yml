@@ -23,15 +23,18 @@ jobs:
         workload_identity_provider: ${{ secrets.CAPY_WORKLOAD_IDENTITY_PROVIDER }}
         service_account: ${{ secrets.CAPY_SERVICE_ACCOUNT }}
 
-    - name: 'Set up Cloud SDK'
-      uses: 'google-github-actions/setup-gcloud@v2'
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        version: '>= 542.0.0'
+        python-version: '3.12'
+
+    - name: Install google-adk CLI
+      run: pip install --upgrade pip google-adk
 
     - name: Run script file
       run: |
-         chmod +x ./scripts/deploy_functions.sh
-         ./scripts/deploy_functions.sh
+         chmod +x ./scripts/deploy_adk_cloud_run.sh
+         ./scripts/deploy_adk_cloud_run.sh
       env:
         CAPY_PROJECT_ID: ${{ secrets.CAPY_PROJECT_ID }}
         CAPY_SERVER_REGION: ${{ secrets.CAPY_SERVER_REGION }}
