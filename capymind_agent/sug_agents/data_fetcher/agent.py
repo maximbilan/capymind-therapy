@@ -7,8 +7,7 @@ DATA_FETCHER_PROMPT = (
     "Do not offer therapy guidance; only fetch and summarize data."
 )
 
-# The tool is registered at import via capymind_agent.tools
-from capymind_agent.tools.firestore_data import capy_firestore_data  # noqa: F401
+from capymind_agent.tools.firestore_data import capy_firestore_data_tool
 
 
 data_fetcher_agent = Agent(
@@ -16,4 +15,5 @@ data_fetcher_agent = Agent(
     name="data_fetcher",
     description="Fetches Firestore data (user, notes, settings) for a given user_id",
     instruction=DATA_FETCHER_PROMPT,
+    tools=[capy_firestore_data_tool],
 )

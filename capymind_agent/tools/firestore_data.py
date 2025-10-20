@@ -1,7 +1,7 @@
 import os
 from typing import Any, Dict, List
 
-from google.adk.tools import tool
+from google.adk.tools import FunctionTool
 
 
 def _to_jsonable(value: Any) -> Any:
@@ -47,35 +47,6 @@ def _get_firestore_client():
     return firestore.Client(project=project_id)
 
 
-@tool(
-    name="capy_firestore_data",
-    description=(
-        "Fetch user profile, notes, or settings for a user from Firestore. "
-        "Collections: users/{user_id}, notes (by user reference), settings/{user_id}."
-    ),
-    parameters={
-        "type": "object",
-        "properties": {
-            "operation": {
-                "type": "string",
-                "description": "Which resource to fetch",
-                "enum": ["get_user", "get_notes", "get_settings"],
-            },
-            "user_id": {
-                "type": "string",
-                "description": "User ID (document ID in 'users'/'settings').",
-            },
-            "limit": {
-                "type": "integer",
-                "description": "Max notes to return when operation=get_notes",
-                "minimum": 1,
-                "maximum": 200,
-                "default": 10,
-            },
-        },
-        "required": ["operation", "user_id"],
-    },
-)
 def capy_firestore_data(operation: str, user_id: str, limit: int = 10) -> Dict[str, Any]:
     """
     Firestore data access tool for CapyMind:
@@ -122,3 +93,7 @@ def capy_firestore_data(operation: str, user_id: str, limit: int = 10) -> Dict[s
 
     except Exception as e:  # pragma: no cover - runtime failures surface as tool errors
         return {"ok": False, "error": str(e)}
+
+
+# Expose as ADK FunctionTool instance for agent.tools
+capy_firestore_data_tool = FunctionTool(capy_firestore_data)
