@@ -37,6 +37,11 @@ def _get_firestore_client():
     project_id = os.getenv("CAPY_PROJECT_ID")
     # Optional: allow selecting a specific database (e.g., "development" for local)
     database = os.getenv("CAPY_FIRESTORE_DATABASE")
+    # If the project id is not provided, rely on ADC (workload identity / default project)
+    if not project_id:
+        if database:
+            return firestore.Client(database=database)
+        return firestore.Client()
     if database:
         return firestore.Client(project=project_id, database=database)
     return firestore.Client(project=project_id)
