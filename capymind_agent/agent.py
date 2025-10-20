@@ -8,5 +8,5 @@ root_agent = Agent(
     name='capymind_agent',
     description='An AI agent that handles therapy session requests',
     instruction=prompt,
-    agents=[data_fetcher_agent],
+    sub_agents=[data_fetcher_agent],
 )
