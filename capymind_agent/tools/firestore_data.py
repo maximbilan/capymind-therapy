@@ -30,12 +30,36 @@ def _to_jsonable(value: Any) -> Any:
     return value
 
 
-def _get_firestore_client():
+def _get_firestore_client(
+    override_project_id: Optional[str] = None,
+    override_database: Optional[str] = None,
+):
     # Lazy import inside the tool to keep module import light
     from google.cloud import firestore  # type: ignore
 
-    # Prefer explicit project hints if provided, otherwise rely on ADC metadata
-    return firestore.Client(project="capymind")
+    # Determine project from explicit override or common environment variables.
+    project = (
+        override_project_id
+        or os.getenv("FIRESTORE_PROJECT")
+        or os.getenv("GOOGLE_CLOUD_PROJECT")
+        or os.getenv("GCLOUD_PROJECT")
+        or os.getenv("GCP_PROJECT")
+        or "capymind"
+    )
+
+    client_kwargs: Dict[str, Any] = {}
+    if project:
+        client_kwargs["project"] = project
+
+    # Pass database only if provided and supported by the installed library.
+    if override_database:
+        try:
+            return firestore.Client(database=override_database, **client_kwargs)
+        except TypeError:
+            # Older firestore clients may not support the 'database' argument.
+            pass
+
+    return firestore.Client(**client_kwargs)
 
 
 def capy_firestore_data(
