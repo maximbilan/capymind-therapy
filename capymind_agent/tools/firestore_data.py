@@ -1,13 +1,9 @@
 import os
 import time
 import logging
-import threading
 from typing import Any, Dict, List, Optional
 
 from google.adk.tools import FunctionTool
-
-# Thread-local storage for user context
-_thread_local = threading.local()
 
 # Module-level logger for Firestore tool
 logger = logging.getLogger("capymind.firestore")
@@ -311,51 +307,5 @@ def capy_firestore_data(
         )
 
 
-def set_current_user_id(user_id: str) -> None:
-    """Set the current user ID in thread-local storage."""
-    _thread_local.user_id = user_id
-
-def get_current_user_id() -> Optional[str]:
-    """Get the current user ID from thread-local storage."""
-    return getattr(_thread_local, 'user_id', None)
-
-def capy_firestore_data_with_context(
-    operation: str,
-    user_id: Optional[str] = None,
-    limit: int = 10,
-    project_id: Optional[str] = None,
-    database: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    Firestore data access tool for CapyMind that uses the current user's ID.
-    - get_user: returns the current user's document from 'users/{user_id}'
-    - get_notes: returns recent notes for the current user, ordered by timestamp desc
-    - get_settings: returns the current user's settings document from 'settings/{user_id}'
-    
-    Parameters:
-    - operation: The operation to perform (get_user, get_notes, get_settings)
-    - user_id: Optional user ID. If not provided, will try to extract from context.
-    - limit: Maximum number of notes to return (for get_notes operation)
-    - project_id: Optional Firestore project ID
-    - database: Optional Firestore database name
-    """
-    # If user_id is not provided, try to get it from context
-    if not user_id:
-        # Try thread-local storage first
-        user_id = get_current_user_id()
-        
-        # If not found, try environment variable as fallback
-        if not user_id:
-            user_id = os.getenv("CURRENT_USER_ID")
-    
-    if not user_id:
-        return {
-            "ok": False, 
-            "error": "user_id is required. Please provide the user_id parameter or ensure it's available in context."
-        }
-    
-    return capy_firestore_data(operation, user_id, limit, project_id, database)
-
-# Expose both tools
+# Expose as ADK FunctionTool instance for agent.tools
 capy_firestore_data_tool = FunctionTool(capy_firestore_data)
-capy_firestore_data_context_tool = FunctionTool(capy_firestore_data_with_context)
