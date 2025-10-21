@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from google.adk.tools import FunctionTool
 
@@ -34,20 +34,17 @@ def _get_firestore_client():
     # Lazy import inside the tool to keep module import light
     from google.cloud import firestore  # type: ignore
 
-    project_id = os.getenv("CAPY_PROJECT_ID")
-    # Optional: allow selecting a specific database (e.g., "development" for local)
-    database = os.getenv("CAPY_FIRESTORE_DATABASE")
-    # If the project id is not provided, rely on ADC (workload identity / default project)
-    if not project_id:
-        if database:
-            return firestore.Client(database=database)
-        return firestore.Client()
-    if database:
-        return firestore.Client(project=project_id, database=database)
-    return firestore.Client(project=project_id)
+    # Prefer explicit project hints if provided, otherwise rely on ADC metadata
+    return firestore.Client(project="capymind")
 
 
-def capy_firestore_data(operation: str, user_id: str, limit: int = 10) -> Dict[str, Any]:
+def capy_firestore_data(
+    operation: str,
+    user_id: str,
+    limit: int = 10,
+    project_id: Optional[str] = None,
+    database: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Firestore data access tool for CapyMind:
     - get_user: returns the user document from 'users/{user_id}'
@@ -55,7 +52,10 @@ def capy_firestore_data(operation: str, user_id: str, limit: int = 10) -> Dict[s
     - get_settings: returns the settings document from 'settings/{user_id}'
     """
     try:
-        db = _get_firestore_client()
+        db = _get_firestore_client(
+            override_project_id=project_id,
+            override_database=database,
+        )
 
         if operation == "get_user":
             doc = db.collection("users").document(user_id).get()
@@ -68,10 +68,11 @@ def capy_firestore_data(operation: str, user_id: str, limit: int = 10) -> Dict[s
         if operation == "get_notes":
             # Query notes by user reference
             user_ref = db.collection("users").document(user_id)
+            from google.cloud import firestore as _fs  # type: ignore
             query = (
                 db.collection("notes")
                 .where("user", "==", user_ref)
-                .order_by("timestamp", direction="DESCENDING")
+                .order_by("timestamp", direction=_fs.Query.DESCENDING)
                 .limit(limit)
             )
             results: List[Dict[str, Any]] = []
