@@ -3,7 +3,7 @@ import time
 import logging
 from typing import Any, Dict, List, Optional
 
-from google.adk.tools import FunctionTool
+from google.adk.tools import FunctionTool, ToolContext
 
 # Module-level logger for Firestore tool
 logger = logging.getLogger("capymind.firestore")
@@ -167,7 +167,7 @@ def _get_firestore_client(
 
 def capy_firestore_data(
     operation: str,
-    user_id: str,
+    tool_context: ToolContext,
     limit: int = 10,
     project_id: Optional[str] = None,
     database: Optional[str] = None,
@@ -179,6 +179,13 @@ def capy_firestore_data(
     - get_settings: returns the settings document from 'settings/{user_id}'
     """
     start_ts = time.perf_counter()
+    
+    # Extract user_id from tool context
+    try:
+        user_id = tool_context._invocation_context.user_id
+    except AttributeError:
+        logger.error("ToolContext does not have _invocation_context.user_id")
+        return {"ok": False, "error": "Unable to extract user_id from tool context"}
     
     # Determine the actual project that will be used
     actual_project = (
