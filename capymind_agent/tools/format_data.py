@@ -1,11 +1,6 @@
-import logging
 from typing import Any, Dict, List
 from datetime import datetime
 from google.adk.tools import FunctionTool, ToolContext
-
-# Module-level logger for format data tool
-logger = logging.getLogger("capymind.format_data")
-
 
 def format_data(
     data_type: str,

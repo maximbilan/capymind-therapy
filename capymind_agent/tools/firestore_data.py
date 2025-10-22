@@ -2,7 +2,6 @@ import os
 import time
 import logging
 from typing import Any, Dict, List, Optional
-
 from google.adk.tools import FunctionTool, ToolContext
 
 # Module-level logger for Firestore tool
@@ -73,9 +72,7 @@ def _get_firestore_client(
     # Determine project from explicit override or common environment variables.
     final_project = (
         override_project_id
-        or os.getenv("FIRESTORE_PROJECT")
         or os.getenv("GOOGLE_CLOUD_PROJECT")
-        or os.getenv("GCLOUD_PROJECT")
         or os.getenv("GCP_PROJECT")
         or "capymind"
     )
@@ -143,9 +140,7 @@ def capy_firestore_data(
     # Determine the actual project that will be used
     actual_project = (
         project_id
-        or os.getenv("FIRESTORE_PROJECT")
         or os.getenv("GOOGLE_CLOUD_PROJECT")
-        or os.getenv("GCLOUD_PROJECT")
         or os.getenv("GCP_PROJECT")
         or "capymind"
     )
@@ -153,7 +148,6 @@ def capy_firestore_data(
     # Determine the actual database that will be used
     actual_database = (
         database
-        or os.getenv("FIRESTORE_DATABASE")
         or os.getenv("GOOGLE_CLOUD_DATABASE")
         or "(default)"
     )
