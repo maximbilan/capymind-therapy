@@ -6,5 +6,4 @@ adk deploy cloud_run \
   --region=$CAPY_SERVER_REGION \
   --service_name=capymind-agent \
   --app_name=capymind_agent \
-  --with_ui \
 capymind_agent
