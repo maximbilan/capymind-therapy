@@ -315,4 +315,4 @@ def capy_firestore_data(
 
 
 # Expose as ADK FunctionTool instance for agent.tools
-capy_firestore_data_tool = FunctionTool(capy_firestore_data)
+firestore_data_tool = FunctionTool(capy_firestore_data)
