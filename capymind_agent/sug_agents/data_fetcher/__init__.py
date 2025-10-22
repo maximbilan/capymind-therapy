@@ -1,1 +1,1 @@
-from .agent import data_fetcher_agent  # noqa: F401
+from .agent import data_fetcher_agent
