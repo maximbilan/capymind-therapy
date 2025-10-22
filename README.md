@@ -77,24 +77,6 @@ adk run capymind_agent
 - **Data Formatting**: Human-readable data presentation
 - **Session Management**: Persistent conversation history
 
-### Deployment Options
-
-#### Google Cloud Run
-```bash
-# Deploy using ADK
-adk deploy cloud_run \
-  --project=your-project-id \
-  --region=us-central1 \
-  --service_name=capymind-agent \
-  --app_name=capymind_agent \
-  capymind_agent
-```
-
-#### 3. Local Development
-```bash
-python main.py
-```
-
 ## 📁 Project Structure
 
 ```
