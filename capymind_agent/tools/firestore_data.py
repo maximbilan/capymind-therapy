@@ -2,7 +2,6 @@ import os
 import time
 import logging
 from typing import Any, Dict, List, Optional
-
 from google.adk.tools import FunctionTool, ToolContext
 
 # Module-level logger for Firestore tool
@@ -73,9 +72,7 @@ def _get_firestore_client(
     # Determine project from explicit override or common environment variables.
     final_project = (
         override_project_id
-        or os.getenv("FIRESTORE_PROJECT")
         or os.getenv("GOOGLE_CLOUD_PROJECT")
-        or os.getenv("GCLOUD_PROJECT")
         or os.getenv("GCP_PROJECT")
         or "capymind"
     )
@@ -93,13 +90,6 @@ def _get_firestore_client(
             client_kwargs["project"] = auth_project
             final_project = auth_project
         
-        # Log credential source for debugging
-        if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-            logger.debug("Using service account key from GOOGLE_APPLICATION_CREDENTIALS")
-        elif os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCLOUD_PROJECT"):
-            logger.debug("Using Application Default Credentials (ADC)")
-        else:
-            logger.debug("Using Application Default Credentials (ADC) - no explicit project")
             
     except DefaultCredentialsError:
         # No credentials available, use anonymous credentials as fallback
@@ -117,51 +107,11 @@ def _get_firestore_client(
     # Pass database only if provided and supported by the installed library.
     if override_database:
         try:
-            # Determine authentication method for logging
-            auth_method = "unknown"
-            if os.getenv("FIRESTORE_EMULATOR_HOST"):
-                auth_method = "emulator"
-            elif os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-                auth_method = "service_account_key"
-            elif os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCLOUD_PROJECT"):
-                auth_method = "adc"
-            else:
-                auth_method = "anonymous"
-                
-            logger.debug(
-                "Initializing Firestore client with explicit database project=%s database=%s auth_method=%s emulator=%s",
-                final_project,
-                override_database,
-                auth_method,
-                bool(os.getenv("FIRESTORE_EMULATOR_HOST")),
-            )
             return FirestoreClient(database=override_database, **client_kwargs)
         except TypeError:
             # Older firestore clients may not support the 'database' argument.
-            logger.debug(
-                "Firestore client does not support 'database' kwarg; retrying without project=%s database=%s",
-                final_project,
-                override_database,
-            )
+            pass
 
-        # Determine authentication method for logging
-        auth_method = "unknown"
-        if os.getenv("FIRESTORE_EMULATOR_HOST"):
-            auth_method = "emulator"
-        elif os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-            auth_method = "service_account_key"
-        elif os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCLOUD_PROJECT"):
-            auth_method = "adc"
-        else:
-            auth_method = "anonymous"
-            
-        logger.debug(
-            "Initializing Firestore client project=%s database=%s auth_method=%s emulator=%s",
-            final_project,
-            override_database or "(default)",
-            auth_method,
-            bool(os.getenv("FIRESTORE_EMULATOR_HOST")),
-        )
     return FirestoreClient(**client_kwargs)
 
 
@@ -190,9 +140,7 @@ def capy_firestore_data(
     # Determine the actual project that will be used
     actual_project = (
         project_id
-        or os.getenv("FIRESTORE_PROJECT")
         or os.getenv("GOOGLE_CLOUD_PROJECT")
-        or os.getenv("GCLOUD_PROJECT")
         or os.getenv("GCP_PROJECT")
         or "capymind"
     )
@@ -200,19 +148,10 @@ def capy_firestore_data(
     # Determine the actual database that will be used
     actual_database = (
         database
-        or os.getenv("FIRESTORE_DATABASE")
         or os.getenv("GOOGLE_CLOUD_DATABASE")
         or "(default)"
     )
     
-    logger.info(
-        "capy_firestore_data:start op=%s user_id=%s limit=%s project_id=%s database=%s",
-        operation,
-        user_id,
-        limit,
-        actual_project,
-        actual_database,
-    )
 
     try:
         client_start_ts = time.perf_counter()
@@ -220,31 +159,15 @@ def capy_firestore_data(
             override_project_id=project_id,
             override_database=actual_database,
         )
-        logger.debug(
-            "Firestore client initialized op=%s elapsed_ms=%d",
-            operation,
-            int((time.perf_counter() - client_start_ts) * 1000),
-        )
 
         if operation == "get_user":
             op_start = time.perf_counter()
-            logger.debug("get_user:fetch user_id=%s", user_id)
             doc = db.collection("users").document(user_id).get()
             if not doc.exists:
-                logger.info(
-                    "get_user:not_found user_id=%s elapsed_ms=%d",
-                    user_id,
-                    int((time.perf_counter() - op_start) * 1000),
-                )
                 return {"ok": False, "error": f"user '{user_id}' not found"}
             data = doc.to_dict() or {}
             data["id"] = doc.id
             result = {"ok": True, "data": _to_jsonable(data)}
-            logger.info(
-                "get_user:ok user_id=%s elapsed_ms=%d",
-                user_id,
-                int((time.perf_counter() - op_start) * 1000),
-            )
             return result
 
         if operation == "get_notes":
@@ -257,40 +180,22 @@ def capy_firestore_data(
                 .order_by("timestamp", direction=Query.DESCENDING)
                 .limit(limit)
             )
-            logger.debug("get_notes:query_built user_id=%s limit=%s", user_id, limit)
             op_start = time.perf_counter()
             results: List[Dict[str, Any]] = []
             for snap in query.stream():
                 note = snap.to_dict() or {}
                 note["id"] = snap.id
                 results.append(_to_jsonable(note))
-            logger.info(
-                "get_notes:ok user_id=%s count=%d elapsed_ms=%d",
-                user_id,
-                len(results),
-                int((time.perf_counter() - op_start) * 1000),
-            )
             return {"ok": True, "data": results}
 
         if operation == "get_settings":
             op_start = time.perf_counter()
-            logger.debug("get_settings:fetch user_id=%s", user_id)
             doc = db.collection("settings").document(user_id).get()
             if not doc.exists:
-                logger.info(
-                    "get_settings:not_found user_id=%s elapsed_ms=%d",
-                    user_id,
-                    int((time.perf_counter() - op_start) * 1000),
-                )
                 return {"ok": False, "error": f"settings for user '{user_id}' not found"}
             data = doc.to_dict() or {}
             data["id"] = doc.id
             result = {"ok": True, "data": _to_jsonable(data)}
-            logger.info(
-                "get_settings:ok user_id=%s elapsed_ms=%d",
-                user_id,
-                int((time.perf_counter() - op_start) * 1000),
-            )
             return result
 
         logger.warning("unsupported_operation op=%s user_id=%s", operation, user_id)
@@ -307,11 +212,7 @@ def capy_firestore_data(
         )
         return {"ok": False, "error": str(e)}
     finally:
-        logger.info(
-            "capy_firestore_data:end op=%s elapsed_ms=%d",
-            operation,
-            int((time.perf_counter() - start_ts) * 1000),
-        )
+        pass
 
 
 # Expose as ADK FunctionTool instance for agent.tools
