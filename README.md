@@ -1,4 +1,4 @@
-# CapyMind Therapy
+# CapyMind Session
 
 A compassionate AI therapy assistant built with Google ADK, designed to provide immediate mental health support through evidence-based therapeutic approaches. CapyMind offers a safe, non-judgmental space for users to explore their thoughts and feelings while providing practical coping strategies and crisis support.
 
