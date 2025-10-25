@@ -7,8 +7,6 @@ This directory contains unit tests for the CapyMind Session application.
 - `test_simple.py` - Structural validation tests (no external dependencies)
 - `run_tests.py` - Test runner script
 
-**Note**: Complex tests requiring Google ADK dependencies have been removed to simplify CI/CD and focus on essential structural validation.
-
 ## Running Tests
 
 ### Run all tests:
@@ -43,10 +41,3 @@ The tests cover:
 ## Dependencies
 
 The tests use Python's built-in `unittest` framework. No external dependencies are required - tests focus on structural validation only.
-
-## Notes
-
-- Tests are designed to run without any external dependencies
-- Focus on essential structural validation rather than complex functionality testing
-- Simplified for reliable CI/CD execution
-- Complex tests requiring Google ADK have been removed for maintainability
