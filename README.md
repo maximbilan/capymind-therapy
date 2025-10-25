@@ -37,7 +37,7 @@ git clone <repository-url>
 cd capymind-session
 python -m venv .venv
 source .venv/bin/activate
-pip install google-adk
+pip install google-adk==1.16.0
 pip install google-cloud-firestore
 ```
 2. **Configure API access:**

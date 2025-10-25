@@ -1,1 +1,2 @@
+google-adk==1.16.0
 google-cloud-firestore>=2.16.0
