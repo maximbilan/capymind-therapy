@@ -9,7 +9,6 @@ A compassionate AI therapy assistant built with Google ADK, designed to provide 
 - **Crisis Support**: Specialized crisis line finder with location-based resources
 - **Personalized Care**: Data-driven insights from user profiles and session history
 - **Privacy-First**: Local data storage with optional Firestore integration
-- **Multiple Deployment Options**: Local chat, Cloud Run, and Google Cloud Functions
 
 ### Therapeutic Approaches
 - **Cognitive Behavioral Therapy (CBT)**: Thought-feeling-behavior analysis and reframing
@@ -28,7 +27,7 @@ A compassionate AI therapy assistant built with Google ADK, designed to provide 
 ### Prerequisites
 - Python 3.10 or higher
 - Google Cloud Project (for ADK deployment)
-- Gemini API key (for fallback mode)
+- Gemini API key (for debug mode)
 
 ### Installation
 
@@ -37,17 +36,11 @@ A compassionate AI therapy assistant built with Google ADK, designed to provide 
 git clone <repository-url>
 cd capymind-session
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
+pip install google-adk
+pip install google-cloud-firestore
 ```
-
-2. **Install dependencies:**
-```bash
-pip install -e .
-# For ADK deployment (recommended)
-pip install -e .[adk]
-```
-
-3. **Configure API access:**
+2. **Configure API access:**
 ```bash
 export GOOGLE_API_KEY=your-gemini-api-key
 ```
