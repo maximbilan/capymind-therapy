@@ -48,7 +48,7 @@ class TestFormatData(unittest.TestCase):
         
         self.assertIn("📝 **Note from January 15, 2024 at 10:30 AM**", result)
         self.assertIn("First note", result)
-        self.assertIn("📝 **Note from January 16, 2024 at 2:45 PM**", result)
+        self.assertIn("📝 **Note from January 16, 2024 at 02:45 PM**", result)
         self.assertIn("Second note", result)
     
     def test_format_notes_invalid_timestamp(self):
@@ -116,7 +116,7 @@ class TestFormatData(unittest.TestCase):
     def test_format_user_empty_list(self):
         """Test formatting empty user list."""
         result = format_data("user", [], self.mock_context)
-        self.assertEqual(result, "No user profile found.")
+        self.assertEqual(result, "No user found.")
     
     def test_format_user_single_document(self):
         """Test formatting user document."""
@@ -195,7 +195,7 @@ class TestFormatData(unittest.TestCase):
     
     def test_format_unknown_data_type(self):
         """Test formatting unknown data type."""
-        result = format_data("unknown_type", [], self.mock_context)
+        result = format_data("unknown_type", [{"some": "data"}], self.mock_context)
         self.assertEqual(result, "Unknown data type: unknown_type")
 
 

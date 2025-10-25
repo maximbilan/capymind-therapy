@@ -101,8 +101,8 @@ class TestFirestoreUtils(unittest.TestCase):
         self.assertEqual(result, expected)
     
     @patch('capymind_agent.tools.firestore_data.os.getenv')
-    @patch('capymind_agent.tools.firestore_data.default')
-    @patch('capymind_agent.tools.firestore_data.FirestoreClient')
+    @patch('google.auth.default')
+    @patch('google.cloud.firestore.Client')
     def test_get_firestore_client_with_credentials(self, mock_client, mock_default, mock_getenv):
         """Test getting Firestore client with default credentials."""
         # Mock environment variables
@@ -130,9 +130,9 @@ class TestFirestoreUtils(unittest.TestCase):
         self.assertEqual(result, mock_client_instance)
     
     @patch('capymind_agent.tools.firestore_data.os.getenv')
-    @patch('capymind_agent.tools.firestore_data.default')
-    @patch('capymind_agent.tools.firestore_data.AnonymousCredentials')
-    @patch('capymind_agent.tools.firestore_data.FirestoreClient')
+    @patch('google.auth.default')
+    @patch('google.auth.credentials.AnonymousCredentials')
+    @patch('google.cloud.firestore.Client')
     def test_get_firestore_client_no_credentials(self, mock_client, mock_anon_creds, mock_default, mock_getenv):
         """Test getting Firestore client with no credentials (fallback to anonymous)."""
         # Mock environment variables
@@ -162,9 +162,9 @@ class TestFirestoreUtils(unittest.TestCase):
         self.assertEqual(result, mock_client_instance)
     
     @patch('capymind_agent.tools.firestore_data.os.getenv')
-    @patch('capymind_agent.tools.firestore_data.default')
-    @patch('capymind_agent.tools.firestore_data.AnonymousCredentials')
-    @patch('capymind_agent.tools.firestore_data.FirestoreClient')
+    @patch('google.auth.default')
+    @patch('google.auth.credentials.AnonymousCredentials')
+    @patch('google.cloud.firestore.Client')
     def test_get_firestore_client_with_override_project(self, mock_client, mock_anon_creds, mock_default, mock_getenv):
         """Test getting Firestore client with override project ID."""
         # Mock environment variables
@@ -194,9 +194,9 @@ class TestFirestoreUtils(unittest.TestCase):
         self.assertEqual(result, mock_client_instance)
     
     @patch('capymind_agent.tools.firestore_data.os.getenv')
-    @patch('capymind_agent.tools.firestore_data.default')
-    @patch('capymind_agent.tools.firestore_data.AnonymousCredentials')
-    @patch('capymind_agent.tools.firestore_data.FirestoreClient')
+    @patch('google.auth.default')
+    @patch('google.auth.credentials.AnonymousCredentials')
+    @patch('google.cloud.firestore.Client')
     def test_get_firestore_client_database_not_supported(self, mock_client, mock_anon_creds, mock_default, mock_getenv):
         """Test getting Firestore client when database parameter is not supported."""
         # Mock environment variables
