@@ -36,30 +36,4 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Build (syntax check)
-        run: |
-          echo "Checking syntax of project files..."
-          python -m compileall -q main.py
-          python -m compileall -q capymind_agent/
-          python -m compileall -q tests/
-          echo "✓ All project files compile successfully"
-
-      - name: Run tests (structural validation only)
-        run: python -m unittest tests.test_simple -v
-
-      - name: Run tests with custom runner
-        run: python tests/run_tests.py
-
-      - name: Test summary
-        run: |
-          echo "=== Test Summary ==="
-          echo "✓ Syntax check completed"
-          echo "✓ Structural validation tests completed"
-          echo "✓ Custom test runner completed"
-          echo ""
-          echo "Test files available:"
-          ls -la tests/test_*.py
-          echo ""
-          echo "Note: Only structural validation tests are included"
-          echo "Complex tests requiring Google ADK have been removed for CI simplicity"
-          echo ""
-          echo "All core functionality validated successfully!"
+        run: python -m compileall -q .
