@@ -14,9 +14,4 @@
 .gitignore
 
 node_modules
-
-# Test files
-tests/
-
-# Development scripts
-scripts/
+#!include:.gitignore

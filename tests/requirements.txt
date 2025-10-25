@@ -1,8 +1,0 @@
-# Test dependencies for CapyMind Session
-# These are additional packages needed for testing
-
-# Mocking and testing utilities
-unittest-mock>=1.0.0
-
-# Note: The main dependencies (google-adk, google-cloud-firestore) 
-# are already specified in the main requirements.txt file

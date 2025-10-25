@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 from typing import Any, Dict, List, Optional
 from google.adk.tools import FunctionTool, ToolContext
@@ -127,6 +128,8 @@ def capy_firestore_data(
     - get_notes: returns recent notes for user, ordered by timestamp desc
     - get_settings: returns the settings document from 'settings/{user_id}'
     """
+    start_ts = time.perf_counter()
+    
     # Extract user_id from tool context
     try:
         user_id = tool_context._invocation_context.user_id
@@ -151,12 +154,14 @@ def capy_firestore_data(
     
 
     try:
+        client_start_ts = time.perf_counter()
         db = _get_firestore_client(
             override_project_id=project_id,
             override_database=actual_database,
         )
 
         if operation == "get_user":
+            op_start = time.perf_counter()
             doc = db.collection("users").document(user_id).get()
             if not doc.exists:
                 return {"ok": False, "error": f"user '{user_id}' not found"}
@@ -175,6 +180,7 @@ def capy_firestore_data(
                 .order_by("timestamp", direction=Query.DESCENDING)
                 .limit(limit)
             )
+            op_start = time.perf_counter()
             results: List[Dict[str, Any]] = []
             for snap in query.stream():
                 note = snap.to_dict() or {}
@@ -183,6 +189,7 @@ def capy_firestore_data(
             return {"ok": True, "data": results}
 
         if operation == "get_settings":
+            op_start = time.perf_counter()
             doc = db.collection("settings").document(user_id).get()
             if not doc.exists:
                 return {"ok": False, "error": f"settings for user '{user_id}' not found"}
