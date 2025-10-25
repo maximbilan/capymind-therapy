@@ -11,19 +11,19 @@ This directory contains unit tests for the CapyMind Session application.
 
 ### Run all tests:
 ```bash
-cd /path/to/capymind-session
+cd /path/to/capymind-therapy
 python tests/run_tests.py
 ```
 
 ### Run specific test file:
 ```bash
-cd /path/to/capymind-session
+cd /path/to/capymind-therapy
 python -m unittest tests.test_simple
 ```
 
 ### Run with verbose output:
 ```bash
-cd /path/to/capymind-session
+cd /path/to/capymind-therapy
 python -m unittest tests -v
 ```
 

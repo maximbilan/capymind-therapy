@@ -33,8 +33,8 @@ A compassionate AI therapy assistant built with Google ADK, designed to provide 
 
 1. **Clone and setup environment:**
 ```bash
-git clone <repository-url>
-cd capymind-session
+git clone git@github.com:maximbilan/capymind-therapy.git
+cd capymind-therapy
 python -m venv .venv
 source .venv/bin/activate
 pip install google-adk==1.16.0
@@ -73,7 +73,7 @@ adk run capymind_agent
 ## 📁 Project Structure
 
 ```
-capymind-session/
+capymind-therapy/
 ├── capymind_agent/           # Main agent package
 │   ├── agent.py              # Root agent configuration
 │   ├── prompt.py             # Therapy assistant prompt
