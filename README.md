@@ -1,67 +1,89 @@
-# CapyMind Session
+# CapyMind Therapy
 
-Pocket therapist AI agent using Google ADK (optional) with Gemini fallback.
+A compassionate AI therapy assistant built with Google ADK, designed to provide immediate mental health support through evidence-based therapeutic approaches. CapyMind offers a safe, non-judgmental space for users to explore their thoughts and feelings while providing practical coping strategies and crisis support.
 
-## Install
+## 🌟 Features
 
-Ensure Python 3.10+.
+### Core Capabilities
+- **Evidence-Based Therapy**: Incorporates CBT, DBT, ACT, and mindfulness techniques
+- **Crisis Support**: Specialized crisis line finder with location-based resources
+- **Personalized Care**: Data-driven insights from user profiles and session history
+- **Privacy-First**: Local data storage with optional Firestore integration
 
+### Therapeutic Approaches
+- **Cognitive Behavioral Therapy (CBT)**: Thought-feeling-behavior analysis and reframing
+- **Dialectical Behavior Therapy (DBT)**: Distress tolerance and emotion regulation
+- **Acceptance and Commitment Therapy (ACT)**: Values clarification and mindfulness
+- **Mindfulness Techniques**: Grounding exercises and present-moment awareness
+
+### Safety Features
+- **Crisis Detection**: Automatic risk assessment and crisis intervention
+- **Location-Aware Support**: Finds local crisis lines based on user location
+- **Emergency Protocols**: Directs users to appropriate emergency services
+- **Trauma-Informed Care**: Gentle, validating communication style
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.10 or higher
+- Google Cloud Project (for ADK deployment)
+- Gemini API key (for debug mode)
+
+### Installation
+
+1. **Clone and setup environment:**
 ```bash
+git clone <repository-url>
+cd capymind-session
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .
-# Optional ADK
-pip install -e .[adk]
+pip install google-adk
+pip install google-cloud-firestore
 ```
-
-Set your Gemini API key if not using ADK or while ADK is experimental:
-
+2. **Configure API access:**
 ```bash
-export CAPY_GEMINI_API_KEY=sk-...  # get from Google AI Studio
-export CAPY_GEMINI_MODEL=gemini-1.5-flash-latest  # optional
+export GOOGLE_API_KEY=your-gemini-api-key
 ```
 
-## Usage
+### Local Development
 
-Interactive chat:
-
+**Start the web interface:**
 ```bash
-capymind-session chat
+adk web
 ```
 
-### Google Cloud Functions (HTTP) deployment
-
-Create a simple function that exposes the agent as a REST API.
-
-Entry point: `agent_chat` in `capymind_session/gcf.py`.
-
-Deploy (2nd gen):
-
+**Command-line chat:**
 ```bash
-gcloud functions deploy capymind-agent-chat \
-  --gen2 --runtime python312 --region us-central1 \
-  --entry-point agent_chat --trigger-http --allow-unauthenticated \
-  --set-env-vars CAPY_GEMINI_API_KEY=$CAPY_GEMINI_API_KEY,CAPY_GEMINI_MODEL=gemini-1.5-flash-latest
+adk run capymind_agent
 ```
 
-Invoke:
+## 🏗️ Architecture
 
-```bash
-curl -X POST "https://REGION-PROJECT.cloudfunctions.net/capymind-agent-chat" \
-  -H 'Content-Type: application/json' \
-  -d '{"message": "I feel anxious before my meeting, can you help?"}'
+### Agent Structure
+- **Root Agent**: Main therapy assistant with Gemini 2.5 Flash
+- **Crisis Line Agent**: Specialized crisis support and resource finding
+- **Data Fetcher Agent**: User profile and session data management
+
+### Tools & Integrations
+- **Firestore Integration**: User data storage and retrieval
+- **Google Search**: Crisis line and resource discovery
+- **Data Formatting**: Human-readable data presentation
+- **Session Management**: Persistent conversation history
+
+## 📁 Project Structure
+
 ```
-
-Slash commands inside chat:
-- `/journal <text>`: Save a private journal entry
-- `/recent [n]`: Show last n journal entries (default 5)
-- `/mood <label> <1-10>`: Log your mood
-- `/moodsum [n]`: Show average intensity per mood over last n logs (default 20)
-- `/plan <mood>`: Suggest coping strategies
-
-Data is stored under `~/.capymind_session/`.
-
-## Notes
-- This assistant is not a replacement for a licensed therapist.
-- In crisis, call your local emergency number or text/call 988 (US).
-- ADK integration point is scaffolded in `capymind_session/agent.py` in `_adk_reply`.
+capymind-session/
+├── capymind_agent/           # Main agent package
+│   ├── agent.py              # Root agent configuration
+│   ├── prompt.py             # Therapy assistant prompt
+│   ├── sug_agents/           # Specialized sub-agents
+│   │   ├── crisis_line/      # Crisis support agent
+│   │   └── data_fetcher/     # Data management agent
+│   └── tools/                # Agent tools
+│       ├── firestore_data.py # Firestore integration
+│       └── format_data.py    # Data formatting
+├── scripts/                  # Deployment scripts
+├── main.py                   # FastAPI application
+└── requirements.txt          # Dependencies
+```
