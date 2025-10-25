@@ -1,2 +1,3 @@
 from . import agent
-from . import tools
+# Ensure tools are imported and registered with ADK on package import
+from . import tools  # noqa: F401
