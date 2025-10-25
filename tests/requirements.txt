@@ -4,5 +4,5 @@
 # Mocking and testing utilities
 unittest-mock>=1.0.0
 
-# Note: The main dependencies (google-adk, google-cloud-firestore) 
+# Note: The main dependencies (google-adk==1.16.0, google-cloud-firestore) 
 # are already specified in the main requirements.txt file

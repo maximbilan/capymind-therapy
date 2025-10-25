@@ -29,7 +29,7 @@ jobs:
         python-version: '3.12'
 
     - name: Install google-adk CLI
-      run: pip install --upgrade pip google-adk
+      run: pip install --upgrade pip google-adk==1.16.0
 
     - name: Run script file
       run: |
