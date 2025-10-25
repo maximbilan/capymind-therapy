@@ -1,1 +1,1 @@
-from . import firestore_data  # noqa: F401
+from . import firestore_data
