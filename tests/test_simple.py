@@ -153,7 +153,7 @@ class TestSimple(unittest.TestCase):
             content = f.read()
         
         # Check for key sections
-        self.assertIn('# CapyMind Session', content)
+        self.assertIn('# CapyMind Therapy', content)
         self.assertIn('Features', content)  # Check for "Features" anywhere in the content
         self.assertIn('Quick Start', content)
         self.assertIn('Architecture', content)
