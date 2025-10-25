@@ -9,7 +9,7 @@ POOL_NAME="GitHubCI"
 LOCATION="global"
 PROVIDER_ID="github-provider"
 PROVIDER_NAME="GitHub Provider"
-REPO="maximbilan/capymind-session"
+REPO="maximbilan/capymind-therapy"
 PRINCIPAL_SET="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/$LOCATION/workloadIdentityPools/$POOL_ID/attribute.repository/$REPO"
 
 # Bind the Workload Identity User role to the service account for the principal set
