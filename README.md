@@ -59,6 +59,8 @@ adk run capymind_agent
 
 ## 🏗️ Architecture
 
+![CapyMind Therapy Arhitecture](https://github.com/user-attachments/assets/bdcb4fc9-ad11-41bd-9dd1-50d615b67d4f)
+
 ### Agent Structure
 - **Root Agent**: Main therapy assistant with Gemini 2.5 Flash
 - **Crisis Line Agent**: Specialized crisis support and resource finding
